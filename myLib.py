@@ -33,6 +33,8 @@ def install_check():
     not_installed_packages = []
     if 'colorama' not in installed_packages:
         not_installed_packages.append('colorama')
+    if 'scapy' not in installed_packages:
+        not_installed_packages.append('scapy')
 
     if len(not_installed_packages) != 0:
         installer(not_installed_packages)
