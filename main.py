@@ -2,12 +2,21 @@
 import myLib
 myLib.install_check()
 
-from wrappers import make_green, make_red, make_blue
 import scapy
 from scapy.layers.inet import IP, UDP
 from scapy.packet import Raw
 from scapy.sendrecv import sr1, sniff, send, srp1
 import hashlib
+from colorama import init, Fore
+
+# initialize colorama
+init()
+# define colors
+RED = Fore.RED
+GREEN = Fore.GREEN
+BLUE = Fore.BLUE
+RESET = Fore.RESET
+
 
 server_IP = "54.71.128.194"
 sever_Port = 99
@@ -96,7 +105,6 @@ def alien_checker(packet):
            and packet[IP].src == server_IP
 
 
-@make_green
 def alien_print(packet):
     server_answer = packet[Raw].load.decode()
     status, code, message = answer_separator(server_answer)
@@ -106,8 +114,10 @@ def alien_print(packet):
     global airport
     global sent
 
-    print(f"Status: {status}, code: {code}")
-    print(f"Decrypted: {message}")
+    print(f"""{GREEN}
+    Status: {status}, code: {code}
+    Decrypted: {message}
+    {RESET}""")
 
     if "vehicle chosed" in message:
         vehicle_id = message.split(' id ')[1]
@@ -121,13 +131,13 @@ def alien_print(packet):
 
 def send_fly(vehicle, airprt):
     # sending landing info
-    print("Giving md5")
+    print(f"{BLUE}Giving md5{RESET}")
     str2hash = DESTINATION
     result = hashlib.md5(str2hash.encode())
-    result = result.hexdiget()
+    result = result.hexdigest()
 
     data = MESSAGE_LANDING.format(result, airprt, vehicle)
-    print("********************************")
+    print(f"{BLUE}Sending a FLY request: {RESET}")
     print(f"Data: {data}")
     payload = encrypt(data, 8)
 
@@ -137,7 +147,7 @@ def send_fly(vehicle, airprt):
 
 def main():
     # sending destination planet
-    print("Sending Aliens to Jupiter")
+    print(f"{BLUE}Sending Aliens to Jupiter{RESET}")
     payload = encrypt(DESTINATION, 3)
     udp_message = IP(dst=server_IP) / UDP(dport=sever_Port) / Raw(load=MESSAGE_ENT + "003" + payload)
     send(udp_message)
