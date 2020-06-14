@@ -39,7 +39,6 @@ def encrypt(data, encryption_pattern):
     return result
 
 
-@make_green
 def main():
     print("Hello")
     encrypt_pattern = extractor()
