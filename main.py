@@ -1,11 +1,12 @@
 # check installed packages
 import myLib
+
 myLib.install_check()
 
 import scapy
 from scapy.layers.inet import IP, UDP
 from scapy.packet import Raw
-from scapy.sendrecv import sr1, sniff, send, srp1
+from scapy.sendrecv import sr1, sniff, send, srp1, sendp
 import hashlib
 from colorama import init, Fore
 
@@ -17,7 +18,6 @@ GREEN = Fore.GREEN
 BLUE = Fore.BLUE
 RESET = Fore.RESET
 
-
 server_IP = "54.71.128.194"
 sever_Port = 99
 bufferSize = 1024
@@ -25,6 +25,9 @@ bufferSize = 1024
 vehicle_id = ''
 airport = ''
 sent = False
+
+location_ready = False
+location_data = {}
 
 DESTINATION = "jupiter"
 
@@ -123,17 +126,31 @@ def alien_print(packet):
         vehicle_id = message.split(' id ')[1]
     elif "airport selected" in message:
         airport = message.split("takeoff: ")[1]
+    elif "location data" in message:
+        data = message[13:]
+        number = data.split("/")[0]
+        info = data.split(": ")[1]
+        location_data[number] = info
 
-    if not sent and vehicle_id != '' and airport != '':
-        send_fly(vehicle_id, airport)
+        print(f"""{BLUE} 
+        Data: {data} 
+        {RESET}""")
+
+    if not sent and vehicle_id != '' and airport != '' and len(location_data) == 10:
+        data = ""
+        for val in location_data.values():
+            data += val
+
+        print(f"Location Data: {data}")
+        send_fly(vehicle_id, airport, data)
         sent = True
 
 
-def send_fly(vehicle, airprt):
+def send_fly(vehicle, airprt, location):
     # sending landing info
     print(f"{BLUE}Giving md5{RESET}")
-    str2hash = DESTINATION
-    result = hashlib.md5(str2hash.encode())
+
+    result = hashlib.md5(location.encode())
     result = result.hexdigest()
 
     data = MESSAGE_LANDING.format(result, airprt, vehicle)
@@ -141,7 +158,7 @@ def send_fly(vehicle, airprt):
     print(f"Data: {data}")
     payload = encrypt(data, 8)
 
-    udp_message = IP(dst=server_IP) / UDP(dport=sever_Port) / Raw(load=MESSAGE_FLY + "008" + payload)
+    udp_message = IP(dst=server_IP) / UDP(dport=sever_Port, sport=1234) / Raw(load=MESSAGE_FLY + "008" + payload)
     send(udp_message)
 
 
@@ -149,7 +166,8 @@ def main():
     # sending destination planet
     print(f"{BLUE}Sending Aliens to Jupiter{RESET}")
     payload = encrypt(DESTINATION, 3)
-    udp_message = IP(dst=server_IP) / UDP(dport=sever_Port) / Raw(load=MESSAGE_ENT + "003" + payload)
+    udp_message = IP(dst=server_IP) / UDP(dport=sever_Port, sport=1234) / Raw(load=MESSAGE_ENT + "003" + payload)
+    udp_message.show()
     send(udp_message)
 
     print("Sniffing answers: ")
