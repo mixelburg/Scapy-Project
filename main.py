@@ -180,7 +180,6 @@ def alien_print(packet):
     global vehicle_id
     global airport
     global sent
-    global sent_planet
 
     # getting data and decrypting it
     server_answer = packet[Raw].load.decode()
@@ -200,18 +199,7 @@ def alien_print(packet):
 
     # collection and parcing data
     if not sent_planet:
-        # sending destination planet
-        print(f"{RED}Sending Aliens to Jupiter{RESET}")
-
-        # encrypting data
-        payload = encrypt_decrypt(DESTINATION, 3)
-
-        # creating message and sending it
-        udp_message = IP(dst=server_IP) / UDP(dport=sever_Port, sport=local_port) / Raw(
-            load=MESSAGE_ENT + "003" + payload)
-        send(udp_message)
-        # raising the flag
-        sent_planet = True
+        send_initial()
     elif "vehicle chosed" in message:
         # collecting vehicle info
         vehicle_id = message.split(' id ')[1]
@@ -249,7 +237,13 @@ def alien_print(packet):
     # if aliens agreed to go home, then print the end message
     elif status == MESSAGE_END:
         print_end()
+        print(f"Earth saved on: {datetime.now().strftime(DATETIME_FORMAT)}")
         raise KeyboardInterrupt
+    elif "timed out" in message: # if some error accured
+        print(f"{RED} Error, probably yo didn't receive some packets {RESET}")
+        print(f"{BLUE}Starting collecting data and trying one more time: {RESET}")
+        send_initial()
+        sniff(lfilter=alien_checker, prn=alien_print)
 
     # checking if it is possible to send them back
     if not sent and vehicle_id != '' and airport != '' and len(location_data) == NUM_LOCATION_PARTS:
@@ -262,6 +256,23 @@ def alien_print(packet):
         send_fly(vehicle_id, airport, data)
         # raise the flag
         sent = True
+
+
+def send_initial():
+    global sent_planet
+
+    # sending destination planet
+    print(f"{RED}Sending Aliens to Jupiter{RESET}")
+
+    # encrypting data
+    payload = encrypt_decrypt(DESTINATION, 3)
+
+    # creating message and sending it
+    udp_message = IP(dst=server_IP) / UDP(dport=sever_Port, sport=local_port) / Raw(
+        load=MESSAGE_ENT + "003" + payload)
+    send(udp_message)
+    # raising the flag
+    sent_planet = True
 
 
 def send_fly(vehicle, airprt, location):
@@ -295,8 +306,7 @@ def main():
     print(f"{BLUE}Please open Alien client{RESET}")
 
     # starting data collection
-    packets = sniff(lfilter=alien_checker, prn=alien_print)
-    print(f"Earth saved on: {datetime.now().strftime(DATETIME_FORMAT)}")
+    sniff(lfilter=alien_checker, prn=alien_print)
 
 
 if __name__ == '__main__':
